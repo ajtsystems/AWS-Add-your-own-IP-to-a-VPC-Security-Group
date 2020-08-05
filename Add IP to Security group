@@ -1,0 +1,61 @@
+#AWS credential creation 
+#Import AWS module 
+#Add AWS account login details 
+#Run this once on the source machine after installing nstall the AWS Powershell SDK 
+Set-AWSCredential -accessKey AKIA4HSOAEPY5PK5EHGU -secretkey xyqOUaGVtFMGdxWJY234512355 -StoreAS jbcreds
+ 
+ 
+#This runs, using the Profile created from Set-AWSCredential (above) 
+Initialize-AWSDefaultConfiguration -Profilename Jonscredentials -Region us-east-1 
+set-awsCredentials -profilename jbcreds 
+ 
+ 
+#get Public IP Address 
+$PublicIP = Invoke-RestMethod http://api.ipstack.com/check?access_key=bf916a20b998db030cb5a43b271e4d1f | Select -exp ip 
+$PublicIP2 = Invoke-RestMethod https://api.myip.com | select -exp ip
+$publicIP = $PublicIP + "/32" 
+$publicIP2 = $PublicIP2 + "/32" 
+#SecurityGroup Access to all IDservers 
+#Jons Remote Access
+$groupID = "sg-123412341234" 
+
+ 
+$description = (get-date -format ddMMyyyy) + " SS" 
+ 
+function RemoveSecRules{ 
+#Clear Down all other Inbound rules on Security Group 
+ 
+$a = ($groupid | Get-EC2SecurityGroup).IpPermissions 
+
+foreach ($ip in $a) {$iprem = @{ipProtocol=$ip.IpProtocol;fromPort=$ip.FromPort;ToPort=$ip.ToPort; IpRanges=$ip.IpRanges}; revoke-EC2SecuritygroupIngress -GroupID $groupId -IPPermissions $iprem} 
+}
+                 
+                 
+#remove all existing rules                 
+RemoveSecRules 
+ 
+#add new rule for RDP for 1st public ip
+ 
+$rdp = 3389 #Port Number 
+$https = 443
+#$sql = 1433 
+$ip1 = @{IpProtocol="TCP"; FromPort=$rdp; ToPort=$rdp; IPRanges=$PublicIP} 
+$ip2 = @{IpProtocol="TCP"; FromPort=$https; ToPort=$https; IPRanges=$PublicIP} 
+#$ip3 = @{IpProtocol="TCP"; FromPort=$sql; ToPort=$sql; IPRanges=$PublicIP} 
+
+#add new rule for RDP for 2st public ip
+ 
+$rdp = 3389 #Port Number 
+$https = 443
+#$sql = 1433 
+$ip3 = @{IpProtocol="TCP"; FromPort=$rdp; ToPort=$rdp; IPRanges=$PublicIP} 
+$ip4 = @{IpProtocol="TCP"; FromPort=$https; ToPort=$https; IPRanges=$PublicIP2} 
+#$ip3 = @{IpProtocol="TCP"; FromPort=$sql; ToPort=$sql; IPRanges=$PublicIP2} 
+
+ 
+#For multiple rules add $ip to -IPPermission params 
+   # Grant-EC2SecurityGroupIngress -GroupID $groupID -IPPermission @($ip1,$ip2) 
+Grant-EC2SecurityGroupIngress -GroupID $groupID -IPPermission @($ip3,$ip2)
+Grant-EC2SecurityGroupIngress -GroupID $groupID -IPPermission @($ip3,$ip4)
+#Grant-EC2SecurityGroupIngress -GroupID $groupID2 -IPPermission @($ip3)
+
